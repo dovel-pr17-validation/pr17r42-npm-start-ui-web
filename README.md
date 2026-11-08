@@ -1,0 +1,233 @@
+<h1 align="center"><img src=".github/assets/thumbnail.png" alt="Start UI Web" /></h1>
+
+🚀 Start UI <small>[web]</small> is an opinionated frontend starter repository created & maintained by the [BearStudio Team](https://www.bearstudio.fr/team) and other contributors.
+It represents our team's up-to-date stack that we use when creating web apps for our clients.
+
+## Technologies
+
+<div align="center" style="margin: 0 0 16px 0"><img src=".github/assets/tech-logos.png" alt="Technologies logos of the starter" /></div>
+
+[⚙️ Node.js](https://nodejs.org), [🟦 TypeScript](https://www.typescriptlang.org/), [⚛️ React](https://react.dev/), [📦 TanStack Start](https://tanstack.com/start), [💨 Tailwind CSS](https://tailwindcss.com/), [🧩 shadcn/ui](https://ui.shadcn.com/), [📋 React Hook Form](https://react-hook-form.com/), [🔌 oRPC](https://orpc.dev/), [🛠 Prisma](https://www.prisma.io/), [🔐 Better Auth](https://www.better-auth.com/), [📚 Storybook](https://storybook.js.org/), [🧪 Vitest](https://vitest.dev/), [🎭 Playwright](https://playwright.dev/)
+
+## Documentation
+
+For detailed information on how to use this project, please refer to the [documentation](https://docs.web.start-ui.com). The documentation contains all the necessary information on installation, usage, and some guides.
+
+## Requirements
+
+- [Node.js](https://nodejs.org) >= 22
+- [pnpm](https://pnpm.io/)
+- [Docker](https://www.docker.com/) (or a [PostgreSQL](https://www.postgresql.org/) database)
+
+## Getting Started
+
+```bash
+pnpm create start-ui -t web myApp
+```
+
+That will scaffold a new folder with the latest version of 🚀 Start UI <small>[web]</small> 🎉
+
+## Setup your IDE
+
+- VS Code
+
+```bash
+cp .vscode/settings.example.json .vscode/settings.json
+```
+
+- Zed
+
+```bash
+cp .zed/settings.example.json .zed/settings.json
+```
+
+### TypeScript 7
+
+This project uses [TypeScript 7](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/), the native compiler. It ships a `tsc` binary but no `tsserver`, so editors need the native language server to typecheck exactly like `pnpm lint:ts` does.
+
+- VS Code: install the [TypeScript 7](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.native-preview) extension (`TypeScriptTeam.native-preview`). The example settings already enable it:
+
+```jsonc
+"js/ts.experimental.useTsgo": true,
+"js/ts.tsdk.path": "./node_modules/typescript"
+```
+
+Without it, your editor falls back to its bundled TypeScript 5 and may report different errors than CI.
+
+## Installation
+
+```bash
+cp .env.example .env  # Setup your env variables
+pnpm install          # Install dependencies
+pnpm dk:init          # Start Docker containers (PostgreSQL, S3-compatible storage, Maildev)
+pnpm db:init          # Push the Prisma schema and seed the database
+```
+
+> [!NOTE]
+> **Don't want to use docker?**
+>
+> Setup a PostgreSQL database (locally or online) and replace the **DATABASE_URL** environment variable. Then you can run `pnpm db:push` to update your database schema and then run `pnpm db:seed` to seed your database.
+
+## Run
+
+```bash
+pnpm dk:start # Only if your Docker containers are not running
+pnpm dev
+```
+
+## Docker image
+
+The `Dockerfile` builds a production image of the app. It is based on the
+official [pnpm image](https://github.com/pnpm/pnpm/pkgs/container/pnpm), which
+also installs the Node runtime. The Node major version is pinned by the
+`NODE_VERSION` build argument (default `24`).
+
+Only the `VITE_*` variables are needed at build time, because they are inlined
+in the client bundle. Server variables (`DATABASE_URL`, `AUTH_SECRET`, `EMAIL_*`,
+`S3_*`...) are **not** build arguments: they are read at runtime from the
+container environment, so they never end up in the image layers.
+
+Build the image:
+
+```bash
+docker build -t start-ui-web \
+  --build-arg VITE_BASE_URL="http://localhost:3000" \
+  --build-arg VITE_S3_BUCKET_PUBLIC_URL="http://localhost:7070/default" \
+  --build-arg VITE_ENV_NAME="DOCKER" \
+  --build-arg VITE_ENV_EMOJI="🐋" \
+  --build-arg VITE_ENV_COLOR="blue" \
+  .
+```
+
+Run it, passing the server variables. With the local Docker Compose stack
+running (`pnpm dk:start`), the container can reach the services through the
+compose network using their service names (`postgres`, `s3`, `maildev`):
+
+```bash
+docker run -d --name start-ui-web -p 3000:3000 \
+  --network start-ui-web_default \
+  -e DATABASE_URL="postgres://startui:startui@postgres:5432/startui" \
+  -e AUTH_SECRET="change-me" \
+  -e EMAIL_SERVER="smtp://username:password@maildev:1025" \
+  -e EMAIL_FROM="Start UI <noreply@example.com>" \
+  -e S3_HOST="s3:7070" \
+  -e S3_ACCESS_KEY_ID="startui-access-key" \
+  -e S3_SECRET_ACCESS_KEY="startui-secret-key" \
+  -e S3_SECURE=false \
+  -e S3_FORCE_PATH_STYLE=true \
+  start-ui-web
+```
+
+> [!NOTE]
+> The `start-ui-web_default` network is created by Docker Compose. Outside of
+> the compose stack, omit `--network` and point the variables at your own
+> services. You can also use `--env-file` instead of individual `-e` flags.
+
+The container runs as the unprivileged `node` user, listens on port `3000`
+and exposes a Docker `HEALTHCHECK`.
+
+### Emails in development
+
+#### Maildev to catch emails
+
+In development, the emails will not be sent and will be caught by [maildev](https://github.com/maildev/maildev) which runs as a Docker container.
+
+The maildev UI is available at [localhost:1080](http://localhost:1080) (port configurable via `DOCKER_MAILDEV_UI_PORT` in `.env`).
+
+#### Preview emails
+
+Emails templates are built with `react-email` components in the `src/emails` folder.
+
+Run the react-email preview server (port **3030**, or the next free one, separate from the Vite app on 3000):
+
+```bash
+pnpm dev:email
+```
+
+Open [http://localhost:3030](http://localhost:3030) to browse templates under `src/emails/templates`. Each template should define `PreviewProps` on the default export for realistic fixtures, including `language` (no default is injected), OTP code, and so on. Use the preview toolbar **Props** tab to tweak props live, for example to switch `language`, without changing the template source.
+
+Email images live in `public/static` (served by the app at `${VITE_BASE_URL}/static`). `src/emails/templates/static` is a symlink to it so the preview server can serve them too. On Windows, enable `git config core.symlinks true` before cloning.
+
+### OpenAPI Documentation for the API
+
+You can access the API documentation via the OpenAPI interface at:
+
+`http://localhost:3000/api/openapi/app`
+
+This interface allows you to:
+
+- View complete and up-to-date documentation of all backend endpoints exposed by the API.
+
+- Understand request and response formats for each route.
+
+- Facilitate development and debugging by testing endpoints directly from the interface, without needing the frontend.
+
+### Generate custom icons components from svg files
+
+Put the custom svg files into the `src/components/icons/svg-sources` folder and then run the following command:
+
+```bash
+pnpm gen:icons
+```
+
+If you want to use the same set of custom duotone icons that Start UI is already using, checkout
+[Phosphor](https://phosphoricons.com/)
+
+> [!WARNING]
+> All svg icons should be svg files prefixed by `icon-` (example: `icon-external-link`) with **square size** and **filled with `#000` color** (will be replaced by `currentColor`).
+
+### E2E Tests
+
+E2E tests are setup with Playwright.
+
+```sh
+pnpm e2e:setup  # Setup context to be used across test for more efficient execution
+pnpm e2e        # Run tests in headless mode, this is the command executed in CI
+pnpm e2e:ui     # Open a UI which allows you to run specific tests and see test execution
+```
+
+> [!WARNING]
+> The generated e2e context files contain authentication logic. If you make changes to your local database instance, you should re-run `pnpm e2e:setup`. It will be run automatically in a CI context.
+
+## Production
+
+```bash
+pnpm install
+pnpm storybook:build # Optional: Will expose the Storybook at `/storybook`
+pnpm build
+pnpm start
+```
+
+## Show hint on development environments
+
+Setup the `VITE_ENV_NAME` env variable with the name of the environment.
+
+```
+VITE_ENV_NAME="staging"
+VITE_ENV_EMOJI="🔬"
+VITE_ENV_COLOR="teal"
+```
+
+## Demo mode
+
+> [!WARNING]
+> Demo mode disables authentication security (mocked OTP 000000, seeded accounts). Only enable on a public demo with disposable seed data. Never enable on a deployment with real users.
+
+Set `VITE_IS_DEMO="true"` only for a public demo running a production build with disposable seed data (e.g. `admin@admin.com` / `user@user.com` logging in with code `000000`). Real email sending is disabled in demo mode.
+
+## FAQ
+
+<details><summary><strong>git detect a lot of changes inside my <code>.husky</code> folder</strong></summary>
+<p>
+You probably have updated your branch with lefthook installed instead of husky. Follow these steps to fix
+your hooks issue:
+<ul>
+  <li><code>git config --unset core.hooksPath</code></li>
+  <li><code>rm -rf ./.husky</code></li>
+  <li><code>pnpm install</code></li>
+</ul>
+
+From now husky should have been removed; and lefthook should run your hooks correctly.
+
+</p>
+</details>

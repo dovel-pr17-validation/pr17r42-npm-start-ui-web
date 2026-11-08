@@ -1,0 +1,17 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { z } from 'zod';
+
+import PageLoginVerify from '@/features/auth/page-login-verify';
+
+export const Route = createFileRoute('/login/verify/')({
+  component: RouteComponent,
+  validateSearch: z.object({
+    redirect: z.string().catch('').optional(),
+    email: z.email(),
+  }),
+});
+
+function RouteComponent() {
+  const search = Route.useSearch();
+  return <PageLoginVerify search={search} />;
+}

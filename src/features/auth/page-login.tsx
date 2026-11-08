@@ -84,9 +84,9 @@ export default function PageLogin({
 
     if (result.error) {
       const errorMessage = result.error.code
-        ? t(
-            `auth:errorCode.${result.error.code as unknown as keyof typeof authClient.$ERROR_CODES}`
-          )
+        ? t(`auth:errorCode.${result.error.code}`, {
+            defaultValue: result.error.message || result.error.code,
+          })
         : (typeof result.error.message === 'string' && result.error.message) ||
           t('auth:errorCode.UNKNOWN_ERROR');
       toast.error(errorMessage);
